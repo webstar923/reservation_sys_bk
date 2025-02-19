@@ -4,8 +4,9 @@ const JWT_SECRET = 'your_secret_key'; // Use an environment variable in producti
 // Middleware to authenticate user based on JWT token
 const authenticate = (req, res, next) => {
   
-  const token = req.headers['authorization']?.split(' ')[1]; // Bearer <token>
-
+  const token = req.headers;
+  console.log("123687:",token);
+  
   if (!token) {
     return res.status(403).json({ message: 'Access denied' });
   }

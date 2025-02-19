@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const JWT_SECRET = 'your_secret_key'; // Store in an environment variable for production
+const JWT_REFRESH_SECRET = 'JWT_REFRESH_SECRET';
 
 // Register a new user
 const register = async (req, res) => {
@@ -39,16 +40,22 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, username: user.name, role: user.role }, JWT_SECRET,{expiresIn:'1h'});
+    const accessToken  = jwt.sign({ id: user.id, username: user.name, role: user.role }, JWT_SECRET,{expiresIn:'1h'});
+    const refreshToken  = jwt.sign({ id: user.id, username: user.name, role: user.role }, JWT_REFRESH_SECRET,{expiresIn:'1h'});
     
-    res.cookie('suthToken',token,{
-      httpOnly: true, // Prevents access via JavaScript
-      secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-      sameSite: 'Strict', // CSRF protection
-      maxAge: 3600000, // 1 hour
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     
-    res.json({ message: 'Login successful', token,role:user.role });
+    res.json({ message: 'Login successful', accessToken ,refreshToken,role:user.role });
   
   } catch (err) {
     console.error(err);
