@@ -2,6 +2,8 @@ const express = require('express');
 const sequelize = require('./config');
 const authRoutes = require('./routes/authRoutes');
 const reservationRoutes = require('./routes/reservationRoutes');
+const flatRoutes = require('./routes/flatRoutes');
+
 
 
 
@@ -13,6 +15,7 @@ app.use(express.json());
 // Use authentication routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reservation',reservationRoutes);
+app.use('/api/flat',flatRoutes)
 
 
 
