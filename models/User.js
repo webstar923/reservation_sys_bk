@@ -27,6 +27,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  permissionStatus:{
+    type:DataTypes.BOOLEAN,
+    defaultValue:false
+  },
   role: {
     type: DataTypes.STRING,
     defaultValue: 'user', // or 'admin'

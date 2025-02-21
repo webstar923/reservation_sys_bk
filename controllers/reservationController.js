@@ -34,6 +34,7 @@ const findFlat = async (req, res) => {
   }
 };
 const findReservation = async (req, res) => {
+  
   try {
     const { reservation_id } = req.body; // Extract name from the request body   
 
@@ -118,6 +119,9 @@ const updatReservation = async (req, res) => {
     if (!reservation) {
       return res.status(404).json({ message: 'Reservation not found' });
     }
+    if (reservation.user_name!==req.user.id) {
+      return res.status(404).json({ message: 'Reservation not found' });
+    }
     
     reservation.reservation_time = reservation_date; 
     reservation.division = reservation_division || reservation.division; 
@@ -130,6 +134,8 @@ const updatReservation = async (req, res) => {
   }
 };
 const findWork = async (req, res) => {
+  console.log("this is backend code ------------");
+  
   try {
     const { room_num, flat_name } = req.body;
 
@@ -155,12 +161,12 @@ const findWork = async (req, res) => {
         [Op.gte]: currentTime,  // Current time must be less than or equal to end_time
       },
     };
-
+    console.log("this is available works:",whereConditions)
     // Query works using Sequelize
     const works = await Work.findAll({
       where: whereConditions,
     });
-
+    
     // Check if no works are found
     if (works.length === 0) {
       return res.status(404).json({ message: 'No works found during the current time' });
@@ -228,7 +234,7 @@ const createReservation = async (req, res) => {
       return res.status(400).json({ message: 'All required fields must be filled' });
     }
     
-    const newReservation = await Reservation.create({user_name:4, flat_name,room_num,work_name,reservation_time,division});
+    const newReservation = await Reservation.create({user_name:req.user.id, flat_name,room_num,work_name,reservation_time,division});
     console.log(newReservation);
     res.status(201).json(newReservation);
   } catch (err) {
@@ -238,17 +244,15 @@ const createReservation = async (req, res) => {
 };
 const getReservations = async (req, res) => {  
   try {  
-      
-    const bookedReservations = await Reservation.findAll({user_name:4});    
+      console.log("------------",req.user.id);
+    const bookedReservations = await Reservation.findAll({user_name:req.user.id});    
     
     const dataValues = bookedReservations.map(reservation => {
-      // reservation_time を年月日のみの形式に変換
       const reservationTime = new Date(reservation.dataValues.reservation_time);
-      const formattedDate = reservationTime.toISOString().split('T')[0]; // 'YYYY-MM-DD' 形式に変換
-    
+      const formattedDate = reservationTime.toISOString().split('T')[0]; 
       return {
         ...reservation.dataValues,
-        reservation_time: formattedDate, // 変更した年月日を設定
+        reservation_time: formattedDate,
       };
     }); 
     if (dataValues.length === 0) {

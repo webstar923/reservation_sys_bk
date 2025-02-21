@@ -13,6 +13,11 @@ const Work = sequelize.define('Work', {
     allowNull: false,
     unique: false,
   },
+  room_num: {
+    type: DataTypes.NUMBER,
+    allowNull: false,
+    unique: false,
+  },
   start_time: {
     type: DataTypes.TIME,
     allowNull: false,
