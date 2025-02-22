@@ -2,6 +2,7 @@ const { Op } = require('sequelize'); // Import the Op operator from Sequelize
 const Flat = require('../models/Flat'); // Your Flat model
 const Work = require('../models/Work');
 const Reservation = require('../models/Reservation');
+const logger = require('../logger');
 
 // Find Flat by partial match on the name
 const findFlat = async (req, res) => {
@@ -108,23 +109,41 @@ const findChangeDate = async (req, res) => {
   }
 };
 const updatReservation = async (req, res) => {
+ 
+  
   try {
     const { reservation_id,reservation_date,reservation_division} = req.body; // Extract name from the request body   
     
-    if (!reservation_id) {
+    if (!reservation_id) {      
       return res.status(400).json({ message: 'reservation_id is required' });
     }
-
-    const reservation = await Reservation.findByPk(reservation_id);
+    
+    const reservation = await Reservation.findByPk(reservation_id);    
     if (!reservation) {
+      logger.logError(user.useremail+'ユーザーから存在しない予約の変更要請がありました。');
       return res.status(404).json({ message: 'Reservation not found' });
     }
-    if (reservation.user_name!==req.user.id) {
+    if (reservation.user_name!== String(req.user.id)) {
       return res.status(404).json({ message: 'Reservation not found' });
     }
     
     reservation.reservation_time = reservation_date; 
-    reservation.division = reservation_division || reservation.division; 
+    reservation.division = reservation_division || reservation.division;
+
+    if (reservation.reservation_time !== reservation_date && reservation.division !== reservation_division) {
+      logger.logInportantInfo('予約番号'+reservation.id+'の予約が予約日'+reservation_date+'に予約区分が'+reservation_division+'に変更されました。'); 
+      logger.logChangeInfo('予約番号'+reservation.id+'の予約が予約日'+reservation_date+'に予約区分が'+reservation_division+'に変更されました。'); 
+      
+    } else if(reservation.reservation_time === reservation_date && reservation.division !== reservation_division) {
+      logger.logInportantInfo('予約番号'+reservation.id+'の予約が予約日'+reservation_date+'に変更されました。'); 
+      logger.logChangeInfo('予約番号'+reservation.id+'の予約が予約日'+reservation_date+'に変更されました。'); 
+      
+    }else{
+      logger.logInportantInfo('予約番号'+reservation.id+'の予約区分が'+reservation_division+'に変更されました。'); 
+      logger.logChangeInfo('予約番号'+reservation.id+'の予約区分が'+reservation_division+'に変更されました。'); 
+      
+    }
+    
     await reservation.save();
 
     return res.status(200).json(reservation);
@@ -134,8 +153,6 @@ const updatReservation = async (req, res) => {
   }
 };
 const findWork = async (req, res) => {
-  console.log("this is backend code ------------");
-  
   try {
     const { room_num, flat_name } = req.body;
 
@@ -179,7 +196,6 @@ const findWork = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
-
 const getChangeableDate = async (req, res) => {
   try {
     const {work_name,flat_name,room_num} = req.body; // Extract name from the request body   
@@ -215,7 +231,6 @@ const getChangeableDate = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 function __getDatesBetween(startTime, endTime) {
   const dates = [];
   let currentDate = new Date(); // Start from startTime  
@@ -235,7 +250,8 @@ const createReservation = async (req, res) => {
     }
     
     const newReservation = await Reservation.create({user_name:req.user.id, flat_name,room_num,work_name,reservation_time,division});
-    console.log(newReservation);
+   
+    logger.logInportantInfo('新しい予約が作成されました。'+'予約番号は'+newReservation.id+'です。'); 
     res.status(201).json(newReservation);
   } catch (err) {
     console.error(err);
@@ -244,8 +260,7 @@ const createReservation = async (req, res) => {
 };
 const getReservations = async (req, res) => {  
   try {  
-      console.log("------------",req.user.id);
-    const bookedReservations = await Reservation.findAll({user_name:req.user.id});    
+    const bookedReservations = await Reservation.findAll({user_name:req.user.id}); 
     
     const dataValues = bookedReservations.map(reservation => {
       const reservationTime = new Date(reservation.dataValues.reservation_time);

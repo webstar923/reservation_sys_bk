@@ -5,28 +5,20 @@ const reservationRoutes = require('./routes/reservationRoutes');
 const flatRoutes = require('./routes/flatRoutes');
 const workRoutes = require('./routes/workRoutes');
 const userRoutes = require('./routes/userRoutes');
+const logRoutes = require('./routes/logRoutes');
 const authenticate = require('./middleware/authMiddleware');
 
-
-
-
-
 const app = express();
-// app.use(cookieParser());
-// Middleware to parse JSON
+ 
 app.use(express.json());
 
-// Use authentication routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reservation',authenticate,reservationRoutes);
-app.use('/api/flat',authenticate,flatRoutes)
-app.use('/api/work',authenticate,workRoutes)
-app.use('/api/user',authenticate,userRoutes)
+app.use('/api/flat',authenticate,flatRoutes);
+app.use('/api/work',authenticate,workRoutes);
+app.use('/api/user',authenticate,userRoutes);
+app.use('/api/log',authenticate,logRoutes);
 
-
-
-
-// Sync Sequelize models and start the server
 sequelize.sync()
   .then(() => {
     console.log('Database connected');

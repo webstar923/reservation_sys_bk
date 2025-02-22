@@ -3,13 +3,14 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const JWT_SECRET = 'your_secret_key'; // Store in an environment variable for production
 const JWT_REFRESH_SECRET = 'JWT_REFRESH_SECRET';
-
+const logger = require('../logger');
 // Register a new user
 const register = async (req, res) => {
   try {
     const { name, phoneNum, email, password, address } = req.body;
     const existingUser = await User.findOne({ where: { email } });    
     if (existingUser) {
+      logger.logError('存在している'+email+'で会員登録を試みました。');
       return res.status(400).json({ message: 'ユーザーは既に存在します' });
     }
     
@@ -18,11 +19,11 @@ const register = async (req, res) => {
     }
     
     const newUser = await User.create({ name, password, phoneNum,email,address});
-
+    logger.logInfo('新しい'+email+'会員登録に成功しました。許可を待っています。');
     res.status(201).json({ message: 'ユーザーが正常に作成されました' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'サーバーエラーr' });
+    res.status(500).json({ message: 'サーバーエラー' });
   }
 };
 
@@ -32,16 +33,23 @@ const login = async (req, res) => {
     const {email, password } = req.body;
     const user = await User.findOne({ where: { email } });
     if (!user) {
+      logger.logError('録されていない'+email+'でログインしようとしました。');
       return res.status(400).json({ message: 'ユーザーが見つかりません' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      logger.logError(email+'ユーザーがログインしようとしましたが、パスワードが一致しなかったため、ログインに失敗しました。');
       return res.status(400).json({ message: '無効な資格情報' });
     }
-
-    const accessToken  = jwt.sign({ id: user.id, username: user.name, role: user.role }, JWT_SECRET,{expiresIn:'10h'});
-    const refreshToken  = jwt.sign({ id: user.id, username: user.name, role: user.role }, JWT_REFRESH_SECRET,{expiresIn:'10h'});
+    
+    if (user.permissionStatus === "inpermission") {
+      logger.logError(email+'ユーザーがログインしようとしましたが、管理者から許可されていないため、ログインに失敗しました。');
+      return res.status(400).json({ message: 'あなたのアカウントは許可されていません。管理部が許可するまでしばらくお待ちください。' });
+    }
+    logger.logInfo(user.email+'加入者がログインに成功しました。');
+    const accessToken  = jwt.sign({ id: user.id, useremail:user.email, username: user.name, role: user.role }, JWT_SECRET,{expiresIn:'10h'});
+    const refreshToken  = jwt.sign({ id: user.id,useremail:user.email, username: user.name, role: user.role }, JWT_REFRESH_SECRET,{expiresIn:'10h'});
     
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -59,7 +67,7 @@ const login = async (req, res) => {
   
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'サーバーエラーr' });
+    res.status(500).json({ message: 'サーバーエラー' });
   }
 };
 
@@ -68,19 +76,20 @@ const resetPassword = async (req, res) => {
     const {email, password } = req.body;
     const user = await User.findOne({ where: { email } });
     if (!user) {
+      logger.logError("存在しない"+email+"のパスワードリセット要請がありました。");
       return res.status(400).json({ message: 'ユーザーが見つかりません' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;  
-
+    logger.logInfo(email+"のパスワードが"+password+"にリセットされました。");
     await user.save();  
 
     res.json({ message: 'パスワードのリセットに成功しました!' });
   
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'サーバーエラーr' });
+    res.status(500).json({ message: 'サーバーエラー' });
   }
 };
 
@@ -100,7 +109,6 @@ const logout = async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
-
     res.json({ message: 'ログアウトに成功しました' });
   } catch (err) {
     console.error(err);

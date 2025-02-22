@@ -1,6 +1,6 @@
 const { Op } = require('sequelize'); 
 const Work = require('../models/Work');
-
+const logger = require('../logger');
 
 
 const getWorkAllData = async (req, res) => {  
@@ -20,24 +20,24 @@ const getWorkAllData = async (req, res) => {
 const changeWork = async (req, res) => {
   try {
     const {id, work_name, flat_name, room_num, start_time, end_time} = req.body; // Extract name from the request body   
-    console.log("this is backend data:",start_time);
     
     if (!id) {
       return res.status(400).json({ message: 'work_id is required' });
     }
 
-    const Work = await Work.findByPk(id);
-    if (!Work) {
+    const changeWork = await Work.findByPk(id);
+    if (!changeWork) {
       return res.status(404).json({ message: 'Work not found' });
     }
-        Work.work_name= work_name; 
-        Work.flat_name= flat_name; 
-        Work.room_num= room_num; 
-        Work.start_time= start_time; 
-        Work.end_time= end_time; 
+      changeWork.work_name= work_name; 
+      changeWork.flat_name= flat_name; 
+      changeWork.room_num= room_num; 
+      changeWork.start_time= start_time; 
+      changeWork.end_time= end_time; 
     
-    await Work.save();
-    return res.status(200).json(Work);
+    await changeWork.save();
+    logger.logInfo(req.user.useremail+'管理者によって'+changeWork.work_name+'案件が変更されました。');
+    return res.status(200).json(changeWork);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -50,10 +50,9 @@ const createWork = async (req, res) => {
     console.log("asdfsd",work_name,flat_name, room_num, start_time, end_time);
     if ( !work_name||!flat_name||!room_num||!start_time||!end_time) {
       return res.status(400).json({ message: 'All required fields must be filled' });
-    }
-    
+    }    
     const newWork = await Work.create({work_name,flat_name, room_num, start_time, end_time});
-    console.log(newWork);
+    logger.logInfo(req.user.useremail+'管理者によって'+newWork.work_name+'案件が登録されました。');
     res.status(201).json(newWork);
   } catch (err) {
     console.error(err);
@@ -72,6 +71,8 @@ const deleteWork = async (req, res) => {
       return res.status(404).json({ message: 'Flat not found' });
     }
     await Work.destroy({ where: { id } });
+    logger.logInfo(req.user.useremail+'管理者によって'+WorkToDelete.work_name+'案件が削除されました。');
+
     res.status(200).json({ message: 'Flat deleted successfully', Work: WorkToDelete });
   } catch (err) {
     console.error(err);
@@ -81,4 +82,4 @@ const deleteWork = async (req, res) => {
 
 module.exports = { 
     getWorkAllData, changeWork, createWork, deleteWork
-  };
+};
